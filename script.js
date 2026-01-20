@@ -177,7 +177,9 @@ function updateNotesDisplay() {
                                 ${note.subject ? `<span class="note-subject">${subjectName}</span>` : ''}
                             </div>
                         </div>
-                        <button class="delete-btn" data-date="${selectedDateKey}" data-index="${getOriginalIndex(selectedDateKey, note)}">Удалить</button>
+                        <button class="delete-btn" data-date="${selectedDateKey}" data-index="${getOriginalIndex(selectedDateKey, note)}">
+                            <i class="fas fa-trash"></i> Удалить
+                        </button>
                     </div>
                     <div class="note-text">${note.text}</div>
                 `;
@@ -203,6 +205,8 @@ function updateNotesDisplay() {
                         saveNotes();
                         updateNotesDisplay();
                         renderCalendar();
+                        updateStatistics();
+                        updateStatsIcons();
                     }
                 });
             });
@@ -380,6 +384,8 @@ document.getElementById('save-note').addEventListener('click', () => {
             saveNotes();
             updateNotesDisplay();
             renderCalendar();
+            updateStatistics();
+            updateStatsIcons();
         }
     }
 });
@@ -392,6 +398,8 @@ document.getElementById('clear-notes').addEventListener('click', function() {
             saveNotes();
             updateNotesDisplay();
             renderCalendar();
+            updateStatistics();
+            updateStatsIcons();
         }
     }
 });
@@ -433,11 +441,282 @@ document.getElementById('sort-priority').addEventListener('click', function() {
     updateNotesDisplay();
 });
 
+// ==================== ФУНКЦИИ СТАТИСТИКИ ====================
+
+// Функция расчета статистики
+function calculateStatistics() {
+    let totalNotes = 0;
+    let highPriorityCount = 0;
+    let daysWithNotes = 0;
+    const subjectsCount = {};
+    const monthlyActivity = {};
+    const priorityCount = { low: 0, medium: 0, high: 0 };
+    
+    // Проходим по всем заметкам
+    Object.keys(notes).forEach(dateKey => {
+        const dateNotes = notes[dateKey];
+        if (dateNotes && dateNotes.length > 0) {
+            daysWithNotes++;
+            totalNotes += dateNotes.length;
+            
+            // Считаем по месяцам (для активности)
+            const [day, month, year] = dateKey.split('.');
+            const monthKey = `${month}.${year}`;
+            monthlyActivity[monthKey] = (monthlyActivity[monthKey] || 0) + dateNotes.length;
+            
+            // Считаем по заметкам
+            dateNotes.forEach(note => {
+                // Приоритеты
+                if (note.priority) {
+                    priorityCount[note.priority] = (priorityCount[note.priority] || 0) + 1;
+                    if (note.priority === 'high') highPriorityCount++;
+                }
+                
+                // Предметы
+                if (note.subject) {
+                    subjectsCount[note.subject] = (subjectsCount[note.subject] || 0) + 1;
+                }
+            });
+        }
+    });
+    
+    // Обновляем основные показатели
+    document.getElementById('total-notes').textContent = totalNotes;
+    document.getElementById('high-priority').textContent = highPriorityCount;
+    document.getElementById('days-with-notes').textContent = daysWithNotes;
+    document.getElementById('subjects-count').textContent = Object.keys(subjectsCount).length;
+    
+    // Сохраняем данные для графиков
+    window.statsData = {
+        totalNotes,
+        highPriorityCount,
+        daysWithNotes,
+        subjectsCount,
+        monthlyActivity,
+        priorityCount
+    };
+}
+
+// Функция обновления графиков
+function updateCharts() {
+    if (!window.statsData || window.statsData.totalNotes === 0) {
+        // Если нет данных
+        document.getElementById('subjects-chart').innerHTML = '<div class="no-stats">Нет данных для отображения</div>';
+        document.getElementById('priority-chart').innerHTML = '<div class="no-stats">Нет данных для отображения</div>';
+        document.getElementById('activity-chart').innerHTML = '<div class="no-stats">Нет данных для отображения</div>';
+        return;
+    }
+    
+    const data = window.statsData;
+    
+    // График по предметам
+    updateSubjectsChart(data.subjectsCount);
+    
+    // График по приоритетам
+    updatePriorityChart(data.priorityCount);
+    
+    // График активности по месяцам
+    updateActivityChart(data.monthlyActivity);
+}
+
+// Обновление графика предметов
+function updateSubjectsChart(subjectsCount) {
+    const subjectsChart = document.getElementById('subjects-chart');
+    const totalNotes = window.statsData.totalNotes;
+    
+    if (Object.keys(subjectsCount).length === 0) {
+        subjectsChart.innerHTML = '<div class="no-stats">Нет заметок с предметами</div>';
+        return;
+    }
+    
+    // Цвета для предметов
+    const subjectColors = {
+        'русский': '#FF6B6B',
+        'литература': '#4ECDC4',
+        'история': '#FFD166',
+        'математика': '#06D6A0',
+        'информатика': '#118AB2',
+        'биология': '#073B4C',
+        'физика': '#EF476F',
+        'химия': '#7209B7',
+        'география': '#3A86FF',
+        'обществознание': '#FB5607'
+    };
+    
+    // Сортируем по количеству (по убыванию)
+    const sortedSubjects = Object.entries(subjectsCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8); // Берем топ-8
+    
+    let chartHTML = '';
+    
+    sortedSubjects.forEach(([subject, count]) => {
+        const percentage = totalNotes > 0 ? Math.round((count / totalNotes) * 100) : 0;
+        const subjectName = getSubjectName(subject);
+        const color = subjectColors[subject] || '#666666';
+        
+        chartHTML += `
+            <div class="chart-item">
+                <div class="chart-label">
+                    <div class="chart-color" style="background-color: ${color}"></div>
+                    <span>${subjectName}</span>
+                </div>
+                <div class="chart-bar">
+                    <div class="chart-fill" style="width: ${percentage}%; background-color: ${color}"></div>
+                </div>
+                <div class="chart-value">${count}</div>
+            </div>
+        `;
+    });
+    
+    subjectsChart.innerHTML = chartHTML;
+}
+
+// Обновление графика приоритетов
+function updatePriorityChart(priorityCount) {
+    const priorityChart = document.getElementById('priority-chart');
+    const totalNotes = window.statsData.totalNotes;
+    
+    if (totalNotes === 0) {
+        priorityChart.innerHTML = '<div class="no-stats">Нет заметок</div>';
+        return;
+    }
+    
+    // Цвета для приоритетов
+    const priorityColors = {
+        'high': 'var(--priority-high)',
+        'medium': 'var(--priority-medium)',
+        'low': 'var(--priority-low)'
+    };
+    
+    const priorityNames = {
+        'high': 'Высокий',
+        'medium': 'Средний',
+        'low': 'Низкий'
+    };
+    
+    let chartHTML = '';
+    
+    // Порядок: высокий, средний, низкий
+    const order = ['high', 'medium', 'low'];
+    
+    order.forEach(priority => {
+        const count = priorityCount[priority] || 0;
+        if (count > 0) {
+            const percentage = totalNotes > 0 ? Math.round((count / totalNotes) * 100) : 0;
+            const color = priorityColors[priority];
+            const name = priorityNames[priority];
+            
+            chartHTML += `
+                <div class="chart-item">
+                    <div class="chart-label">
+                        <div class="chart-color" style="background-color: ${color}"></div>
+                        <span>${name}</span>
+                    </div>
+                    <div class="chart-bar">
+                        <div class="chart-fill" style="width: ${percentage}%; background-color: ${color}"></div>
+                    </div>
+                    <div class="chart-value">${count}</div>
+                </div>
+            `;
+        }
+    });
+    
+    if (chartHTML === '') {
+        chartHTML = '<div class="no-stats">Нет заметок с приоритетами</div>';
+    }
+    
+    priorityChart.innerHTML = chartHTML;
+}
+
+// Обновление графика активности по месяцам
+function updateActivityChart(monthlyActivity) {
+    const activityChart = document.getElementById('activity-chart');
+    
+    if (Object.keys(monthlyActivity).length === 0) {
+        activityChart.innerHTML = '<div class="no-stats">Нет данных по месяцам</div>';
+        return;
+    }
+    
+    // Названия месяцев
+    const monthNames = [
+        'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+    ];
+    
+    // Сортируем месяцы
+    const sortedMonths = Object.entries(monthlyActivity)
+        .sort(([monthA], [monthB]) => {
+            const [m1, y1] = monthA.split('.').map(Number);
+            const [m2, y2] = monthB.split('.').map(Number);
+            return y1 !== y2 ? y1 - y2 : m1 - m2;
+        });
+    
+    // Находим максимальное значение для масштабирования
+    const maxValue = Math.max(...Object.values(monthlyActivity));
+    
+    let chartHTML = '';
+    
+    sortedMonths.forEach(([monthKey, count]) => {
+        const [monthNum, year] = monthKey.split('.').map(Number);
+        const monthName = monthNames[monthNum - 1] || `Месяц ${monthNum}`;
+        const percentage = maxValue > 0 ? Math.round((count / maxValue) * 100) : 0;
+        
+        chartHTML += `
+            <div class="activity-bar">
+                <div class="activity-month">${monthName} ${year}</div>
+                <div class="activity-track">
+                    <div class="activity-fill" style="width: ${percentage}%">
+                        <span class="activity-count">${count}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    activityChart.innerHTML = chartHTML;
+}
+
+// Функция обновления статистики
+function updateStatistics() {
+    calculateStatistics();
+    updateCharts();
+}
+
+// Функция обновления иконок статистики
+function updateStatsIcons() {
+    const statsValues = document.querySelectorAll('.stats-value');
+    
+    // Анимация обновления значений
+    statsValues.forEach(element => {
+        element.style.transform = 'scale(1.1)';
+        setTimeout(() => {
+            element.style.transform = 'scale(1)';
+        }, 300);
+    });
+}
+
+// Обработчик кнопки обновления статистики
+document.getElementById('refresh-stats').addEventListener('click', function() {
+    updateStatistics();
+    updateStatsIcons();
+    
+    // Анимация кнопки
+    const icon = this.querySelector('i');
+    icon.style.transform = 'rotate(360deg)';
+    icon.style.transition = 'transform 0.5s ease';
+    
+    setTimeout(() => {
+        icon.style.transform = 'rotate(0deg)';
+    }, 500);
+});
+
 // Загружаем заметки, тему и запускаем отрисовку при загрузке страницы
 window.onload = function() {
     loadTheme();
     loadNotes();
     renderCalendar();
+    updateStatistics();
     
     // Устанавливаем текущую дату как выбранную по умолчанию
     const today = new Date();
@@ -445,4 +724,9 @@ window.onload = function() {
         selectedDateKey = formatDateKey(today.getDate(), today.getMonth(), today.getFullYear());
         updateNotesDisplay();
     }
+    
+    // Показываем статистику при загрузке
+    setTimeout(() => {
+        updateStatsIcons();
+    }, 1000);
 };
