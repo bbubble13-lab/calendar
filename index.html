@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Календарь с заметками</title>
+    <title>Умный учебный календарь</title>
     <link rel="stylesheet" href="style.css">
     <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📅</text></svg>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <!-- Кнопка переключения темы -->
@@ -32,7 +33,6 @@
                 <span>Заметки для выбранной даты</span>
                 <span id="note-counter" class="note-counter">0/5 заметок</span>
             </div>
-            <div id="current-date-notes"></div>
             
             <!-- Форма добавления новой заметки -->
             <div class="note-form">
@@ -70,21 +70,110 @@
                     Достигнут лимит в 5 заметок на эту дату
                 </div>
                 
-                <div>
-                    <button id="save-note" class="save-btn" disabled>Добавить заметку</button>
-                    <button id="clear-notes" class="clear-btn" disabled>Очистить все заметки</button>
+                <div class="form-buttons">
+                    <button id="save-note" class="save-btn" disabled>
+                        <i class="fas fa-plus"></i> Добавить заметку
+                    </button>
+                    <button id="clear-notes" class="clear-btn" disabled>
+                        <i class="fas fa-trash"></i> Очистить все
+                    </button>
                 </div>
             </div>
             
             <!-- Сортировка заметок -->
             <div class="sort-options">
                 <span>Сортировать по:</span>
-                <button id="sort-time" class="sort-btn active">Времени добавления</button>
-                <button id="sort-priority" class="sort-btn">Приоритету</button>
+                <button id="sort-time" class="sort-btn active">
+                    <i class="fas fa-clock"></i> Времени
+                </button>
+                <button id="sort-priority" class="sort-btn">
+                    <i class="fas fa-flag"></i> Приоритету
+                </button>
             </div>
             
             <div class="notes-list" id="notes-list">
                 <div class="no-notes">Выберите дату, чтобы добавить или просмотреть заметки</div>
+            </div>
+        </div>
+        
+        <!-- Секция статистики -->
+        <div class="stats-section">
+            <div class="stats-header">
+                <h3><i class="fas fa-chart-bar"></i> Статистика заметок</h3>
+                <button id="refresh-stats" class="stats-refresh-btn">
+                    <i class="fas fa-sync-alt"></i> Обновить
+                </button>
+            </div>
+            
+            <div class="stats-grid">
+                <!-- Общая статистика -->
+                <div class="stats-card total">
+                    <div class="stats-icon">
+                        <i class="fas fa-sticky-note"></i>
+                    </div>
+                    <div class="stats-content">
+                        <div class="stats-value" id="total-notes">0</div>
+                        <div class="stats-label">Всего заметок</div>
+                    </div>
+                </div>
+                
+                <!-- Статистика по приоритетам -->
+                <div class="stats-card priority">
+                    <div class="stats-icon">
+                        <i class="fas fa-flag"></i>
+                    </div>
+                    <div class="stats-content">
+                        <div class="stats-value" id="high-priority">0</div>
+                        <div class="stats-label">Высокий приоритет</div>
+                    </div>
+                </div>
+                
+                <!-- Статистика по датам -->
+                <div class="stats-card dates">
+                    <div class="stats-icon">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <div class="stats-content">
+                        <div class="stats-value" id="days-with-notes">0</div>
+                        <div class="stats-label">Дней с заметками</div>
+                    </div>
+                </div>
+                
+                <!-- Статистика по предметам -->
+                <div class="stats-card subjects">
+                    <div class="stats-icon">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <div class="stats-content">
+                        <div class="stats-value" id="subjects-count">0</div>
+                        <div class="stats-label">Предметов использовано</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Детальная статистика -->
+            <div class="stats-details">
+                <div class="stats-detail-card">
+                    <h4><i class="fas fa-list-ol"></i> Распределение по предметам</h4>
+                    <div class="stats-chart" id="subjects-chart">
+                        <div class="no-stats">Нет данных для отображения</div>
+                    </div>
+                </div>
+                
+                <div class="stats-detail-card">
+                    <h4><i class="fas fa-chart-pie"></i> Распределение по приоритетам</h4>
+                    <div class="stats-chart" id="priority-chart">
+                        <div class="no-stats">Нет данных для отображения</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Активность по месяцам -->
+            <div class="stats-activity">
+                <h4><i class="fas fa-chart-line"></i> Активность по месяцам</h4>
+                <div class="activity-chart" id="activity-chart">
+                    <div class="no-stats">Нет данных для отображения</div>
+                </div>
             </div>
         </div>
     </div>
